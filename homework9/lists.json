@@ -1,0 +1,88 @@
+{
+  "lists": [
+    {
+      "id": "901218353094",
+      "name": "Temp List 1779816153798",
+      "orderindex": 0,
+      "content": "",
+      "status": null,
+      "priority": null,
+      "assignee": null,
+      "task_count": 0,
+      "due_date": null,
+      "start_date": null,
+      "folder": {
+        "id": "901211403440",
+        "name": "Test Folder",
+        "hidden": false,
+        "archived": false,
+        "access": true
+      },
+      "space": {
+        "id": "90127720907",
+        "name": "Team Space",
+        "archived": false,
+        "access": true
+      },
+      "archived": false,
+      "override_statuses": false,
+      "permission_level": "create"
+    },
+    {
+      "id": "901218353247",
+      "name": "Temp List 1779816498872",
+      "orderindex": 1,
+      "content": "",
+      "status": null,
+      "priority": null,
+      "assignee": null,
+      "task_count": 0,
+      "due_date": null,
+      "start_date": null,
+      "folder": {
+        "id": "901211403440",
+        "name": "Test Folder",
+        "hidden": false,
+        "archived": false,
+        "access": true
+      },
+      "space": {
+        "id": "90127720907",
+        "name": "Team Space",
+        "archived": false,
+        "access": true
+      },
+      "archived": false,
+      "override_statuses": false,
+      "permission_level": "create"
+    },
+    {
+      "id": "901218354409",
+      "name": "Full Create Test",
+      "orderindex": 2,
+      "content": "",
+      "status": null,
+      "priority": null,
+      "assignee": null,
+      "task_count": 0,
+      "due_date": null,
+      "start_date": null,
+      "folder": {
+        "id": "901211403440",
+        "name": "Test Folder",
+        "hidden": false,
+        "archived": false,
+        "access": true
+      },
+      "space": {
+        "id": "90127720907",
+        "name": "Team Space",
+        "archived": false,
+        "access": true
+      },
+      "archived": false,
+      "override_statuses": false,
+      "permission_level": "create"
+    }
+  ]
+}
