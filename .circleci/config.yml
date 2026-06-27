@@ -13,7 +13,7 @@ jobs:
           name: Run pytest
           command: pytest
 
-postman-tests:
+  postman-tests:
     docker:
       - image: cimg/node:20.11
     working_directory: ~/project
