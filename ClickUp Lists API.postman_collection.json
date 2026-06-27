@@ -1,0 +1,455 @@
+{
+  "info": {
+    "_postman_id": "2e661ce4-ed47-4d92-a871-2d20b113c8cc",
+    "name": "ClickUp Lists API",
+    "description": "Tests for ClickUp List endpoints: getLists, createList, getList, updateList, deleteList. Running the whole collection performs a full lifecycle: create -> verify -> update -> negative checks -> delete.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "9797205",
+    "_collection_link": "https://go.postman.co/collection/9797205-2e661ce4-ed47-4d92-a871-2d20b113c8cc?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "1. Create List (setup lifecycle)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Generate a unique list name for this run",
+              "const name = 'pm_autotest_list_' + Date.now();",
+              "pm.collectionVariables.set('created_list_name', name);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "",
+              "pm.test('Response has list id', function () {",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json.id).to.exist;",
+              "});",
+              "",
+              "pm.test('Created list name matches request', function () {",
+              "    pm.expect(json.name).to.eql(pm.collectionVariables.get('created_list_name'));",
+              "});",
+              "",
+              "// Save id for subsequent requests",
+              "pm.collectionVariables.set('list_id', String(json.id));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{created_list_name}}\",\n  \"content\": \"Created by Postman autotest\",\n  \"priority\": 1\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/folder/{{folder_id}}/list",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "folder",
+            "{{folder_id}}",
+            "list"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Lists (in folder)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "",
+              "pm.test('Response has lists array', function () {",
+              "    pm.expect(json).to.have.property('lists');",
+              "    pm.expect(json.lists).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Created list is present in the folder', function () {",
+              "    const id = pm.collectionVariables.get('list_id');",
+              "    const found = json.lists.some(l => l.id === id);",
+              "    pm.expect(found, 'created list should be listed').to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "apikey",
+          "apikey": [
+            {
+              "key": "value",
+              "value": "{{auth_secret_0p48}}",
+              "type": "string"
+            },
+            {
+              "key": "in",
+              "value": "header",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/folder/{{folder_id}}/list",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "folder",
+            "{{folder_id}}",
+            "list"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get List (by id)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "",
+              "pm.test('Returned id matches created list', function () {",
+              "    pm.expect(json.id).to.eql(pm.collectionVariables.get('list_id'));",
+              "});",
+              "",
+              "pm.test('Returned name matches created list', function () {",
+              "    pm.expect(json.name).to.eql(pm.collectionVariables.get('created_list_name'));",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Get List - negative: no token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 400 or 401 without token', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+              "});",
+              "",
+              "pm.test('Error code indicates auth failure', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('err');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. Get List - negative: invalid token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 with invalid token', function () {",
+              "    pm.response.to.have.status(401);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "invalid_token_123"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "6. Update List",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const newName = 'pm_autotest_list_updated_' + Date.now();",
+              "pm.collectionVariables.set('created_list_name', newName);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "",
+              "pm.test('Name was updated', function () {",
+              "    pm.expect(json.name).to.eql(pm.collectionVariables.get('created_list_name'));",
+              "});",
+              "",
+              "pm.test('Id is unchanged', function () {",
+              "    pm.expect(json.id).to.eql(pm.collectionVariables.get('list_id'));",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{created_list_name}}\",\n  \"content\": \"Updated by Postman autotest\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "7. Delete List (teardown lifecycle)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Save deleted id before clearing, so request 8 can verify 404",
+              "pm.collectionVariables.set('deleted_list_id', pm.collectionVariables.get('list_id'));",
+              "",
+              "// Clean up variable",
+              "pm.collectionVariables.set('list_id', '');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "8. Get List - negative: after delete (404)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// list_id was cleared on delete; re-set it from a saved copy if you want to verify 404.",
+              "// We saved the deleted id below in the previous request's test if needed.",
+              "const deleted = pm.collectionVariables.get('deleted_list_id');",
+              "if (deleted) { pm.collectionVariables.set('list_id', deleted); }"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Deleted list cannot be fetched (404)', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([404]);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api.clickup.com/api/v2"
+    },
+    {
+      "key": "list_id",
+      "value": ""
+    },
+    {
+      "key": "created_list_name",
+      "value": ""
+    },
+    {
+      "key": "auth_secret_0p48",
+      "secret": true
+    },
+    {
+      "key": "deleted_list_id",
+      "value": ""
+    }
+  ]
+}
