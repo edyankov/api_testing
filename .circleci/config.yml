@@ -13,13 +13,12 @@ jobs:
           name: Run pytest
           command: pytest
 
-  postman-tests:
+postman-tests:
     docker:
       - image: cimg/node:20.11
-    working_directory: ~/project/postman
+    working_directory: ~/project
     steps:
-      - checkout:
-          path: ~/project
+      - checkout
       - run: npm install -g newman newman-reporter-htmlextra
       - run:
           name: Run Newman
