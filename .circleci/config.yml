@@ -35,19 +35,22 @@ jobs:
     docker:
       - image: cypress/included:13.13.0
     working_directory: ~/project/clickup-cypress
+    environment:
+      CYPRESS_token: $CLICKUP_TOKEN
+      CYPRESS_teamId: $CLICKUP_TEAM_ID
+      CYPRESS_userId: $CLICKUP_USER_ID
     steps:
       - checkout:
           path: ~/project
       - run:
           name: Install dependencies
-          command: npm install --ignore-scripts
+          command: npm install
+      - run:
+          name: Install Cypress binary
+          command: npx cypress install
       - run:
           name: Run Cypress
           command: npx cypress run
-          environment:
-            CYPRESS_token: $CLICKUP_TOKEN
-            CYPRESS_teamId: $CLICKUP_TEAM_ID
-            CYPRESS_userId: $CLICKUP_USER_ID
 
 workflows:
   all-tests:
