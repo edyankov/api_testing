@@ -19,11 +19,13 @@ jobs:
     working_directory: ~/project
     steps:
       - checkout
-      - run: npm install -g newman newman-reporter-htmlextra
+      - run:
+          name: Install Newman
+          command: npm install newman newman-reporter-htmlextra
       - run:
           name: Run Newman
           command: >
-            newman run "ClickUp Lists API.postman_collection.json"
+            ./node_modules/.bin/newman run "ClickUp Lists API.postman_collection.json"
             --env-var "token=$CLICKUP_TOKEN"
             --env-var "folder_id=$CLICKUP_FOLDER_ID"
             --env-var "space_id=$CLICKUP_SPACE_ID"
@@ -36,7 +38,9 @@ jobs:
     steps:
       - checkout:
           path: ~/project
-      - run: npm install
+      - run:
+          name: Install dependencies
+          command: npm install --ignore-scripts
       - run:
           name: Run Cypress
           command: npx cypress run
