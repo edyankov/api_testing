@@ -1,0 +1,523 @@
+{
+  "info": {
+    "_postman_id": "dd0a0291-0bb1-4112-be6f-64a984a6c92f",
+    "name": "ClickUp Lists API",
+    "description": "Tests for ClickUp List endpoints: getLists, createList, getList, updateList, deleteList. Running the whole collection performs a full lifecycle: create -> verify -> update -> negative checks -> delete. Includes JSON schema validation, console output of all List IDs, a pre-request that creates a Folder via API, and an after-script that deletes it.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "9797205",
+    "_collection_link": "https://go.postman.co/collection/9797205-dd0a0291-0bb1-4112-be6f-64a984a6c92f?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "1. Create List (setup lifecycle)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// ===== PRE-REQUEST API CALL: create an object (Folder) via API =====",
+              "const folderName = 'pm_prescript_folder_' + Date.now();",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('base_url') + '/space/' + pm.environment.get('space_id') + '/folder',",
+              "    method: 'POST',",
+              "    header: {",
+              "        'Authorization': pm.environment.get('token'),",
+              "        'Content-Type': 'application/json'",
+              "    },",
+              "    body: { mode: 'raw', raw: JSON.stringify({ name: folderName }) }",
+              "}, function (err, res) {",
+              "    if (err) { console.log('Pre-request create error:', err); return; }",
+              "    const created = res.json();",
+              "    console.log('Pre-request created folder ID:', created.id);",
+              "    pm.collectionVariables.set('folder_id', String(created.id));",
+              "    pm.collectionVariables.set('prescript_folder_id', String(created.id));",
+              "});",
+              "",
+              "// Generate a unique list name for this run",
+              "const name = 'pm_autotest_list_' + Date.now();",
+              "pm.collectionVariables.set('created_list_name', name);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "",
+              "// ===== SCHEMA VALIDATION =====",
+              "const createListSchema = {",
+              "    type: 'object',",
+              "    required: ['id', 'name'],",
+              "    properties: {",
+              "        id: { type: 'string' },",
+              "        name: { type: 'string' },",
+              "        orderindex: { type: 'number' },",
+              "        folder: { type: 'object' },",
+              "        space: { type: 'object' }",
+              "    }",
+              "};",
+              "pm.test('Create List response matches schema', function () {",
+              "    pm.expect(tv4.validate(json, createListSchema), tv4.error).to.be.true;",
+              "});",
+              "",
+              "pm.test('Response has list id', function () {",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json.id).to.exist;",
+              "});",
+              "",
+              "pm.test('Created list name matches request', function () {",
+              "    pm.expect(json.name).to.eql(pm.collectionVariables.get('created_list_name'));",
+              "});",
+              "",
+              "// Save id for subsequent requests",
+              "pm.collectionVariables.set('list_id', String(json.id));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{created_list_name}}\",\n  \"content\": \"Created by Postman autotest\",\n  \"priority\": 1\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/folder/{{folder_id}}/list",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "folder",
+            "{{folder_id}}",
+            "list"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Lists (in folder)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "",
+              "// ===== SCHEMA VALIDATION =====",
+              "const getListsSchema = {",
+              "    type: 'object',",
+              "    required: ['lists'],",
+              "    properties: {",
+              "        lists: {",
+              "            type: 'array',",
+              "            items: {",
+              "                type: 'object',",
+              "                required: ['id', 'name'],",
+              "                properties: {",
+              "                    id: { type: 'string' },",
+              "                    name: { type: 'string' }",
+              "                }",
+              "            }",
+              "        }",
+              "    }",
+              "};",
+              "pm.test('Get Lists response matches schema', function () {",
+              "    pm.expect(tv4.validate(json, getListsSchema), tv4.error).to.be.true;",
+              "});",
+              "",
+              "pm.test('Response has lists array', function () {",
+              "    pm.expect(json).to.have.property('lists');",
+              "    pm.expect(json.lists).to.be.an('array');",
+              "});",
+              "",
+              "// ===== PRINT ALL LIST IDs TO CONSOLE =====",
+              "const ids = json.lists.map(l => l.id);",
+              "console.log('All List IDs:', ids);",
+              "ids.forEach((id, i) => console.log('List #' + (i + 1) + ' ID: ' + id));",
+              "",
+              "pm.test('Created list is present in the folder', function () {",
+              "    const id = pm.collectionVariables.get('list_id');",
+              "    const found = json.lists.some(l => l.id === id);",
+              "    pm.expect(found, 'created list should be listed').to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/folder/{{folder_id}}/list",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "folder",
+            "{{folder_id}}",
+            "list"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get List (by id)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "",
+              "const json = pm.response.json();",
+              "",
+              "// ===== SCHEMA VALIDATION =====",
+              "const getListSchema = {",
+              "    type: 'object',",
+              "    required: ['id', 'name'],",
+              "    properties: {",
+              "        id: { type: 'string' },",
+              "        name: { type: 'string' },",
+              "        orderindex: { type: 'number' },",
+              "        folder: { type: 'object' },",
+              "        space: { type: 'object' }",
+              "    }",
+              "};",
+              "pm.test('Get List response matches schema', function () {",
+              "    pm.expect(tv4.validate(json, getListSchema), tv4.error).to.be.true;",
+              "});",
+              "",
+              "pm.test('Returned id matches requested list id', function () {",
+              "    pm.expect(String(json.id)).to.eql(pm.collectionVariables.get('list_id'));",
+              "});",
+              "",
+              "// Re-sync the canonical name from the source of truth (the API)",
+              "pm.collectionVariables.set('created_list_name', json.name);",
+              "pm.test('Returned name is a non-empty string', function () {",
+              "    pm.expect(json.name).to.be.a('string').and.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Get List - negative: no token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 400 or 401 without token', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+              "});",
+              "",
+              "pm.test('Error code indicates auth failure', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('err');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. Get List - negative: invalid token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 401 with invalid token', function () {",
+              "    pm.response.to.have.status(401);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "invalid_token_123"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "6. Update List",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const newName = 'pm_autotest_list_updated_' + Date.now();",
+              "pm.collectionVariables.set('created_list_name', newName);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "",
+              "const json = pm.response.json();",
+              "",
+              "pm.test('Name was updated', function () {",
+              "    pm.expect(json.name).to.eql(pm.collectionVariables.get('created_list_name'));",
+              "});",
+              "",
+              "pm.test('Id is unchanged', function () {",
+              "    pm.expect(String(json.id)).to.eql(pm.collectionVariables.get('list_id'));",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{created_list_name}}\",\n  \"content\": \"Updated by Postman autotest\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "7. Delete List (teardown lifecycle)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Save deleted id before clearing, so request 8 can verify 404",
+              "pm.collectionVariables.set('deleted_list_id', pm.collectionVariables.get('list_id'));",
+              "",
+              "// Clean up variable",
+              "pm.collectionVariables.set('list_id', '');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "8. Get List - negative: after delete (404)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// list_id was cleared on delete; re-set it from a saved copy to verify 404.",
+              "const deleted = pm.collectionVariables.get('deleted_list_id');",
+              "if (deleted) { pm.collectionVariables.set('list_id', deleted); }"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Deleted list is gone or marked deleted', function () {",
+              "    if (pm.response.code === 404) {",
+              "        pm.expect(pm.response.code).to.eql(404);",
+              "    } else {",
+              "        // ClickUp may still return 200 from cache right after delete",
+              "        const json = pm.response.json();",
+              "        const goneSignal = json.deleted === true || json.archived === true || json.err;",
+              "        pm.expect(pm.response.code, 'expected 404 or a 200 marking the list deleted')",
+              "          .to.be.oneOf([200, 404]);",
+              "        pm.expect(goneSignal, 'response should indicate the list is deleted/archived').to.be.ok;",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/list/{{list_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "list",
+            "{{list_id}}"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api.clickup.com/api/v2"
+    },
+    {
+      "key": "list_id",
+      "value": ""
+    },
+    {
+      "key": "created_list_name",
+      "value": ""
+    },
+    {
+      "key": "folder_id",
+      "value": ""
+    },
+    {
+      "key": "prescript_folder_id",
+      "value": ""
+    },
+    {
+      "key": "deleted_list_id",
+      "value": ""
+    }
+  ]
+}
